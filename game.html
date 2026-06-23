@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Zoe J. Hibbard — Game</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Merriweather:ital,wght@0,700;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="wrap">
+    <header class="page-header centered-page">
+      <div>
+        <div class="name">Fruit Merge</div>
+        <div class="sub">Slide fruit tiles to reach watermelon</div>
+      </div>
+    </header>
+
+    <nav class="site-nav">
+      <a class="nav-button" href="index.html">Home</a>
+      <a class="nav-button" href="resume.html">Resume</a>
+      <a class="nav-button" href="hobby.html">Hobbies</a>
+      <a class="nav-button" href="game.html">Game</a>
+    </nav>
+
+    <main class="page-card">
+      <section class="section">
+        <div class="game-container">
+          <div class="game-header">
+            <div class="eyebrow">Fruit merge board</div>
+            <p class="home-text">Use the arrow keys to slide matching fruit together. Start with grapes and merge them until you grow a watermelon.</p>
+          </div>
+
+          <div class="game-board" id="gameBoard"></div>
+
+          <div class="game-info">
+            <div class="scoreboard">
+              <div class="score-card">
+                <div class="score-label">Score</div>
+                <div id="scoreValue" class="score-value">0</div>
+              </div>
+            </div>
+            <button id="resetButton" class="nav-button">New Game</button>
+            <p class="muted" id="statusText">Press an arrow key to move.</p>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const size = 4;
+    const tileLabels = {
+      2: '🍇',
+      4: '🍓',
+      8: '🥝',
+      16: '🍎',
+      32: '🍈',
+      64: '🍍',
+      128: '🥥',
+      256: '🍉'
+    };
+
+    let board = [];
+    let score = 0;
+    let lastMoveDirection = null;
+
+    const boardEl = document.getElementById('gameBoard');
+    const statusText = document.getElementById('statusText');
+    const scoreValue = document.getElementById('scoreValue');
+    const resetButton = document.getElementById('resetButton');
+
+    function updateScore() {
+      scoreValue.textContent = score;
+    }
+
+    function createBoard() {
+      board = Array.from({ length: size }, () => Array(size).fill(0));
+      score = 0;
+      lastMoveDirection = null;
+      updateScore();
+      addTile();
+      addTile();
+      renderBoard();
+      statusText.textContent = 'Press an arrow key to move the fruit.';
+    }
+
+    function addTile() {
+      const empty = [];
+      for (let row = 0; row < size; row++) {
+        for (let col = 0; col < size; col++) {
+          if (board[row][col] === 0) empty.push({ row, col });
+        }
+      }
+      if (!empty.length) return;
+      const { row, col } = empty[Math.floor(Math.random() * empty.length)];
+      board[row][col] = Math.random() < 0.9 ? 2 : 4;
+    }
+
+    function renderBoard() {
+      boardEl.innerHTML = '';
+      for (let row = 0; row < size; row++) {
+        for (let col = 0; col < size; col++) {
+          const tile = document.createElement('div');
+          tile.className = 'tile' + (board[row][col] ? ' tile-' + board[row][col] : '');
+          if (lastMoveDirection && board[row][col]) {
+            tile.classList.add('slide-' + lastMoveDirection);
+          }
+          tile.textContent = board[row][col] ? tileLabels[board[row][col]] || board[row][col] : '';
+          boardEl.appendChild(tile);
+        }
+      }
+      lastMoveDirection = null;
+    }
+
+    function move(dir) {
+      const previous = board.map(row => [...row]);
+      lastMoveDirection = dir;
+      if (dir === 'left') slideLeft();
+      if (dir === 'right') slideRight();
+      if (dir === 'up') slideUp();
+      if (dir === 'down') slideDown();
+      if (changed(previous, board)) {
+        addTile();
+        renderBoard();
+        updateScore();
+        if (checkWin()) statusText.textContent = 'You grew a watermelon! Great job!';
+        else if (checkLose()) statusText.textContent = 'Game over — no moves left.';
+      }
+    }
+
+    function changed(prev, current) {
+      for (let i = 0; i < size; i++) {
+        for (let j = 0; j < size; j++) {
+          if (prev[i][j] !== current[i][j]) return true;
+        }
+      }
+      return false;
+    }
+
+    function slideLeft() {
+      for (let row = 0; row < size; row++) {
+        let line = board[row].filter(val => val);
+        for (let i = 0; i < line.length - 1; i++) {
+          if (line[i] === line[i + 1]) {
+            line[i] *= 2;
+            score += line[i];
+            line.splice(i + 1, 1);
+          }
+        }
+        while (line.length < size) line.push(0);
+        board[row] = line;
+      }
+    }
+
+    function slideRight() {
+      for (let row = 0; row < size; row++) {
+        let line = board[row].filter(val => val).reverse();
+        for (let i = 0; i < line.length - 1; i++) {
+          if (line[i] === line[i + 1]) {
+            line[i] *= 2;
+            score += line[i];
+            line.splice(i + 1, 1);
+          }
+        }
+        while (line.length < size) line.push(0);
+        board[row] = line.reverse();
+      }
+    }
+
+    function slideUp() {
+      for (let col = 0; col < size; col++) {
+        const line = [];
+        for (let row = 0; row < size; row++) {
+          if (board[row][col]) line.push(board[row][col]);
+        }
+        for (let i = 0; i < line.length - 1; i++) {
+          if (line[i] === line[i + 1]) {
+            line[i] *= 2;
+            score += line[i];
+            line.splice(i + 1, 1);
+          }
+        }
+        while (line.length < size) line.push(0);
+        for (let row = 0; row < size; row++) {
+          board[row][col] = line[row];
+        }
+      }
+    }
+
+    function slideDown() {
+      for (let col = 0; col < size; col++) {
+        const line = [];
+        for (let row = size - 1; row >= 0; row--) {
+          if (board[row][col]) line.push(board[row][col]);
+        }
+        for (let i = 0; i < line.length - 1; i++) {
+          if (line[i] === line[i + 1]) {
+            line[i] *= 2;
+            score += line[i];
+            line.splice(i + 1, 1);
+          }
+        }
+        while (line.length < size) line.push(0);
+        for (let row = size - 1; row >= 0; row--) {
+          board[row][col] = line[size - 1 - row];
+        }
+      }
+    }
+
+    function checkWin() {
+      return board.some(row => row.some(value => value === 256));
+    }
+
+    function checkLose() {
+      if (board.some(row => row.includes(0))) return false;
+      for (let row = 0; row < size; row++) {
+        for (let col = 0; col < size; col++) {
+          const value = board[row][col];
+          if (col < size - 1 && value === board[row][col + 1]) return false;
+          if (row < size - 1 && value === board[row + 1][col]) return false;
+        }
+      }
+      return true;
+    }
+
+    document.addEventListener('keydown', event => {
+      const key = event.key;
+      if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(key)) {
+        event.preventDefault();
+        move({ ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down' }[key]);
+      }
+    });
+
+    resetButton.addEventListener('click', createBoard);
+    createBoard();
+  </script>
+</body>
+</html>
